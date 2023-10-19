@@ -109,7 +109,7 @@ int queue_get(queue_t *q, int *val) {
 }
 
 void queue_print_stats(queue_t *q) {
-    printf("queue stats: current size %d; attempts: (%ld %ld %ld); counts (%ld %ld %ld)\n",
+    printf("queue stats: current size %d; add_attempts: %ld get_attempts: %ld add_attempts - get_attempts: %ld; add_count: %ld get_count: %ld add_count - get_count: %ld\n",
            q->count,
            q->add_attempts, q->get_attempts, q->add_attempts - q->get_attempts,
            q->add_count, q->get_count, q->add_count - q->get_count);

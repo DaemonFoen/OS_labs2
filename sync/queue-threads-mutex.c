@@ -15,11 +15,9 @@
 #define RED "\033[41m"
 #define NOCOLOR "\033[0m"
 
-// SEGSEV (queue_get on null value)
-// Возможная причина падения - во время методов add и get
-// При привязке к одному ядру программа может!(а может и нет) работать очень долго
-// При привязке к разным ядрам падает почти мгновенно
-// функция sched_yield() влияет на скорость падения программы(без нее быстрее)
+
+//Всегда заполненая очередь
+pthread_mutex_t queue_mutex;
 
 void set_cpu(int n) {
 	int err;
@@ -48,15 +46,19 @@ void *reader(void *arg) {
 
 	while (1) {
 		int val = -1;
+        pthread_mutex_lock(&queue_mutex);
 		int ok = queue_get(q, &val);
-		if (!ok)
-			continue;
+		if (!ok){
+            pthread_mutex_unlock(&queue_mutex);
+            continue;
+        }
 
 		if (expected != val){
             printf(RED"ERROR: get value is %d but expected - %d" NOCOLOR "\n", val, expected);
             fflush(stdout);
         }
 		expected = val + 1;
+        pthread_mutex_unlock(&queue_mutex);
     }
 
 	return NULL;
@@ -68,13 +70,20 @@ void *writer(void *arg) {
 	printf("writer [%d %d %d]\n", getpid(), getppid(), gettid());
     fflush(stdout);
 
-	set_cpu(1);
+	set_cpu(2);
 
 	while (1) {
+//        //Пункт d (Размер 0 практически всегда (I/O bound нагрузка)
+//        usleep(1);
+//        //
+        pthread_mutex_lock(&queue_mutex);
 		int ok = queue_add(q, i);
-		if (!ok)
-			continue;
+		if (!ok){
+            pthread_mutex_unlock(&queue_mutex);
+            continue;
+        }
 		i++;
+        pthread_mutex_unlock(&queue_mutex);
 	}
 
 	return NULL;
@@ -84,6 +93,7 @@ int main() {
 	pthread_t tid;
 	queue_t *q;
 	int err;
+    pthread_mutex_init(&queue_mutex, NULL);
 
 	printf("main [%d %d %d]\n", getpid(), getppid(), gettid());
     fflush(stdout);

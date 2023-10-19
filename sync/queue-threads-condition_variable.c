@@ -1,13 +1,10 @@
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
-#include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <pthread.h>
 #include <sched.h>
 
 #include "queue.h"
@@ -15,11 +12,9 @@
 #define RED "\033[41m"
 #define NOCOLOR "\033[0m"
 
-// SEGSEV (queue_get on null value)
-// Возможная причина падения - во время методов add и get
-// При привязке к одному ядру программа может!(а может и нет) работать очень долго
-// При привязке к разным ядрам падает почти мгновенно
-// функция sched_yield() влияет на скорость падения программы(без нее быстрее)
+pthread_cond_t condition_variable;
+pthread_mutex_t mutex;
+volatile int condition = 0;
 
 void set_cpu(int n) {
 	int err;
@@ -46,17 +41,27 @@ void *reader(void *arg) {
     fflush(stdout);
 	set_cpu(1);
 
+
 	while (1) {
 		int val = -1;
+        pthread_mutex_lock(&mutex);
+        while (condition == 0) {
+            pthread_cond_wait(&condition_variable, &mutex);
+        }
 		int ok = queue_get(q, &val);
-		if (!ok)
-			continue;
+		if (!ok){
+            pthread_mutex_unlock(&mutex);
+            continue;
+        }
 
 		if (expected != val){
             printf(RED"ERROR: get value is %d but expected - %d" NOCOLOR "\n", val, expected);
             fflush(stdout);
         }
 		expected = val + 1;
+        condition = 0;
+        pthread_cond_signal(&condition_variable);
+        pthread_mutex_unlock(&mutex);
     }
 
 	return NULL;
@@ -68,13 +73,23 @@ void *writer(void *arg) {
 	printf("writer [%d %d %d]\n", getpid(), getppid(), gettid());
     fflush(stdout);
 
-	set_cpu(1);
+	set_cpu(2);
 
 	while (1) {
+        pthread_mutex_lock(&mutex);
+        while (condition == 1) {
+            pthread_cond_wait(&condition_variable, &mutex);
+        }
+
 		int ok = queue_add(q, i);
-		if (!ok)
-			continue;
+		if (!ok){
+            pthread_mutex_unlock(&mutex);
+            continue;
+        }
 		i++;
+        condition = 1;
+        pthread_cond_signal(&condition_variable);
+        pthread_mutex_unlock(&mutex);
 	}
 
 	return NULL;
@@ -84,6 +99,9 @@ int main() {
 	pthread_t tid;
 	queue_t *q;
 	int err;
+
+    pthread_cond_init(&condition_variable, NULL);
+    pthread_mutex_init(&mutex, NULL);
 
 	printf("main [%d %d %d]\n", getpid(), getppid(), gettid());
     fflush(stdout);
@@ -106,6 +124,7 @@ int main() {
         fflush(stdout);
         return -1;
     }
+
 
 	pthread_exit(NULL);
 	return 0;
