@@ -1,0 +1,1 @@
+/usr/bin/cc -g -Wall -g -Wall   CMakeFiles/spinlock_queue.c.dir/queue.c.o CMakeFiles/spinlock_queue.c.dir/spinlock_queue.c.o  -o spinlock_queue.c  -lpthread 

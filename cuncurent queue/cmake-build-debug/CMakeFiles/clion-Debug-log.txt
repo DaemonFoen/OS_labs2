@@ -1,0 +1,8 @@
+C:\Windows\system32\wsl.exe --distribution Ubuntu --exec /bin/bash -c "export CMAKE_COLOR_DIAGNOSTICS=ON && export CLION_IDE=TRUE && export JETBRAINS_IDE=TRUE && cd '/mnt/e/Users/Dmitriy/CLionProjects/queue/cuncurent queue/cmake-build-debug' && /usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G 'CodeBlocks - Unix Makefiles' -S '/mnt/e/Users/Dmitriy/CLionProjects/queue/cuncurent queue' -B '/mnt/e/Users/Dmitriy/CLionProjects/queue/cuncurent queue/cmake-build-debug'"
+-- Configuring done
+CMake Error at CMakeLists.txt:13 (add_executable):
+  C_STANDARD is set to invalid value '17'
+
+
+-- Generating done
+CMake Generate step failed.  Build files cannot be regenerated correctly.
